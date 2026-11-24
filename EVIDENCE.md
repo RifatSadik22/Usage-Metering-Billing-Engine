@@ -7,6 +7,9 @@
 - Failed run `45493317635` identified root cause: `alembic.ini` logging configuration lacked `qualname`.
 - Remediation commit: `85c2c9d`.
 - Verified rerun `45497699843`: **success** on `master`.
+- Expanded test commit: `0c662a2`.
+- Worker test-isolation fix: `508d2ce`.
+- Verified CI rerun `45500382597`: **success** on `master`.
 
 ### Local environment
 
