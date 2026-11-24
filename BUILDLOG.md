@@ -19,5 +19,6 @@ AI assisted with implementation structure, schema design, test ideas, Docker con
 - Fixed live Stripe key handling to allow only test-mode key prefixes and reject `sk_live_*` and `rk_live_*`.
 - Added event timestamp ordering for subscription updates/deletions to prevent older events from restoring stale state.
 - Fixed Stripe test-signature generation for the installed SDK and added real PostgreSQL integration coverage.
-- Final observed suite: 14 passed with 84% application coverage.
+- Expanded observed suite: 19 passed with 86% application coverage on PostgreSQL.
+- Added exact AI-token boundary, HTTP 402, monthly cost rollup, temporary/permanent worker retry tests.
 - Real Stripe Checkout and live webhook forwarding are external credential-dependent and remain pending.

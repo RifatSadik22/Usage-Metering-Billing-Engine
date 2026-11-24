@@ -99,6 +99,59 @@ stripe trigger checkout.session.completed
 
 Browser Checkout must never upgrade a tenant directly. Verified Stripe webhooks are the authority. Use test card `4242 4242 4242 4242`, a future expiry, and any valid CVC.
 
+### Secure Stripe test-mode setup
+
+1. Create a free Stripe account and open the Dashboard in Test mode.
+2. Confirm the Dashboard URL indicates test mode. Never enter or commit live-mode keys.
+3. Create a recurring product with a USD 19 monthly price.
+4. Copy the test Secret key from Developers → API keys.
+5. In `.env`, set:
+
+```dotenv
+STRIPE_SECRET_KEY=sk_test_<your_local_test_key>
+STRIPE_PRO_PRICE_ID=price_<your_test_price_id>
+```
+
+Do not paste keys into source files, screenshots, chat, or documentation.
+
+6. Run the Stripe CLI login with the installed Windows executable:
+
+After installing with winget, restart PowerShell and run:
+
+```powershell
+stripe login
+```
+
+If `stripe` is not found, locate the winget executable:
+
+```powershell
+Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Filter stripe.exe -Recurse
+```
+
+7. Forward signed webhooks:
+
+```powershell
+stripe listen --forward-to localhost:8000/webhooks/stripe
+```
+
+Copy the CLI's displayed `whsec_...` signing secret into `STRIPE_WEBHOOK_SECRET` in `.env`, then restart Docker Compose.
+
+8. Create Checkout for Tenant A:
+
+```powershell
+$headers = @{ "X-API-Key" = "demo_tenant_a_key" }
+$session = Invoke-RestMethod -Uri http://localhost:8000/billing/checkout -Method Post -Headers $headers
+Start-Process $session.checkout_url
+```
+
+Complete Checkout with `4242 4242 4242 4242`, a future expiry, and any valid CVC. Upgrade evidence must come from `GET /usage`, not from the browser success page:
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:8000/usage -Headers $headers
+```
+
+The tenant is upgraded only after a verified `checkout.session.completed` or synchronized subscription event. Replay handling can be tested by replaying the same Stripe event in the CLI; the database event ID must remain unique.
+
 Subscription behavior: `active` and `trialing` are serviceable and use Pro limits. `past_due` and `unpaid` require payment and return `402`. Confirmed deletion or cancellation falls back to Free. An older update will not be used to restore a tenant after a confirmed deletion in the durable state model.
 
 ## Tests

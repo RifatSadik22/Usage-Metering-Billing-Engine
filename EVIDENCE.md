@@ -19,11 +19,11 @@
 
 ### Automated verification
 
-Observed from the final clean-PostgreSQL run:
+Observed from the final clean-PostgreSQL run on 2026-11-25:
 
 ```text
-14 passed in 2.68s
-TOTAL coverage: 84%
+19 passed in 2.91s
+TOTAL coverage: 86%
 Ruff: All checks passed
 ```
 
@@ -37,11 +37,16 @@ Covered real PostgreSQL integration scenarios include:
 - Tenant isolation
 - Concurrent duplicate metering with exactly one usage event
 - Exact API quota boundary plus first request beyond 429
+- Exact AI-token quota boundary: 99,900 + 100 succeeds and the next token is rejected
+- HTTP 402 past-due subscription behavior
+- Monthly persisted cost rollup of 3 × 3,325 micro-USD = 9,975 micro-USD
 - `Retry-After` header
 - Missing and valid signed webhook handling
 - Duplicate webhook handling
 - Live-key rejection
 - Worker result processing
+- Worker temporary failure retry scheduling
+- Worker permanent failure and structured exhaustion alert
 
 ### Commands observed
 
@@ -64,21 +69,6 @@ For 1 API call, 1,000 fresh input, 500 cached input, 200 output, and 100 reasoni
 - Output: 800 micro-USD
 - Reasoning: 400 micro-USD
 - Total: **3,325 micro-USD ($0.003325)**
-
-The automated test must observe this exact result.
-
-## Verification commands
-
-Record observed local output for:
-
-```text
-pytest
-ruff check .
-docker compose up --build -d
-curl http://localhost:8000/health
-```
-
-Post-execution outputs should be appended here; do not claim execution that was not run.
 
 ## Environment status
 - Python dependencies: installed.

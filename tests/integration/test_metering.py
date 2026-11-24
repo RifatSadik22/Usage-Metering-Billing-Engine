@@ -7,7 +7,7 @@ from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.core.security import hash_api_key
 from app.main import app
-from app.models.models import Tenant, UsageEvent
+from app.models.models import IdempotencyRecord, Tenant, UsageEvent
 
 client = TestClient(app)
 
@@ -181,3 +181,125 @@ def test_api_quota_boundary_and_next_request(seeded_database) -> None:
     )
     assert exhausted.status_code == 429
     assert exhausted.headers["Retry-After"].isdigit()
+
+
+def test_ai_token_quota_boundary(seeded_database) -> None:
+    with SessionLocal.begin() as db:
+        tenant = db.scalar(
+            select(Tenant).where(
+                Tenant.api_key_hash == hash_api_key(get_settings().demo_tenant_a_api_key)
+            )
+        )
+        tenant.subscription.status = "free"
+        db.query(IdempotencyRecord).filter(IdempotencyRecord.tenant_id == tenant.id).delete()
+        db.query(UsageEvent).filter(UsageEvent.tenant_id == tenant.id).delete()
+        db.add(
+            UsageEvent(
+                tenant_id=tenant.id,
+                idempotency_key="seed-token-99900",
+                request_fingerprint="test",
+                usage_type="generate",
+                api_call_quantity=1,
+                fresh_input_tokens=99900,
+                cached_input_tokens=0,
+                output_tokens=0,
+                reasoning_tokens=0,
+                total_quota_counted_tokens=99900,
+                cost_micro_usd=99900,
+                pricing_version="demo-2026-01",
+                usage_period=__import__("datetime")
+                .datetime.now(__import__("datetime").UTC)
+                .date()
+                .replace(day=1),
+            )
+        )
+
+    allowed = client.post(
+        "/generate",
+        headers=headers(get_settings().demo_tenant_a_api_key, "token-exact-boundary"),
+        json={
+            "input_tokens": 100,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_tokens": 0,
+        },
+    )
+    assert allowed.status_code == 200
+
+    exhausted = client.post(
+        "/generate",
+        headers=headers(get_settings().demo_tenant_a_api_key, "token-one-past"),
+        json={
+            "input_tokens": 1,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_tokens": 0,
+        },
+    )
+    assert exhausted.status_code == 429
+
+
+def test_payment_required_subscription(seeded_database) -> None:
+    with SessionLocal.begin() as db:
+        tenant = db.scalar(
+            select(Tenant).where(
+                Tenant.api_key_hash == hash_api_key(get_settings().demo_tenant_a_api_key)
+            )
+        )
+        tenant.subscription.status = "past_due"
+
+    response = client.post(
+        "/generate",
+        headers=headers(get_settings().demo_tenant_a_api_key, "past-due-request"),
+        json={
+            "input_tokens": 1,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_tokens": 0,
+        },
+    )
+    assert response.status_code == 402
+    assert response.json()["error"]["code"] == "PAYMENT_REQUIRED"
+
+
+def test_monthly_persisted_cost_rollup(seeded_database) -> None:
+    from app.services.meter_service import usage_period
+
+    with SessionLocal.begin() as db:
+        tenant = db.scalar(
+            select(Tenant).where(
+                Tenant.api_key_hash == hash_api_key(get_settings().demo_tenant_a_api_key)
+            )
+        )
+        tenant.subscription.status = "free"
+        db.query(IdempotencyRecord).filter(IdempotencyRecord.tenant_id == tenant.id).delete()
+        db.query(UsageEvent).filter(UsageEvent.tenant_id == tenant.id).delete()
+        db.add_all(
+            [
+                UsageEvent(
+                    tenant_id=tenant.id,
+                    idempotency_key=f"rollup-{index}",
+                    request_fingerprint="test",
+                    usage_type="generate",
+                    api_call_quantity=1,
+                    fresh_input_tokens=1000,
+                    cached_input_tokens=500,
+                    output_tokens=200,
+                    reasoning_tokens=100,
+                    total_quota_counted_tokens=1800,
+                    cost_micro_usd=3325,
+                    pricing_version="demo-2026-01",
+                    usage_period=usage_period(),
+                )
+                for index in range(3)
+            ]
+        )
+
+    usage = client.get(
+        "/usage",
+        headers={"X-API-Key": get_settings().demo_tenant_a_api_key},
+    )
+    assert usage.status_code == 200
+    assert usage.json()["used_api_calls"] == 3
+    assert usage.json()["used_ai_tokens"] == 5400
+    assert usage.json()["metered_cost_micro_usd"] == 9975
