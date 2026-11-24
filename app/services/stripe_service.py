@@ -4,7 +4,10 @@ from app.core.config import Settings
 
 
 def live_mode_rejected(secret_key: str) -> bool:
-    return secret_key.startswith("sk_live_")
+    if not secret_key:
+        return False
+    allowed = secret_key.startswith("sk_test_") or secret_key.startswith("rk_test_")
+    return not allowed
 
 
 class StripeService:
@@ -12,7 +15,7 @@ class StripeService:
         self.settings = settings
         if settings.stripe_secret_key:
             if live_mode_rejected(settings.stripe_secret_key):
-                raise RuntimeError("Live-mode Stripe keys are forbidden")
+                raise RuntimeError("Only Stripe test-mode keys are allowed")
             stripe.api_key = settings.stripe_secret_key
 
     def configured(self) -> bool:

@@ -68,7 +68,7 @@ def process_job(db: Session, job: BackgroundJob) -> dict:
         )
     ).one()
     summary = {
-        "tenant_id": tenant_id,
+        "tenant_id": str(tenant_id),
         "day": day,
         "api_calls": int(result[0]),
         "tokens": int(result[1]),
@@ -79,6 +79,17 @@ def process_job(db: Session, job: BackgroundJob) -> dict:
 
 
 def run_once() -> None:
+    stale_before = datetime.now(UTC) - timedelta(minutes=5)
+    with SessionLocal.begin() as db:
+        stale_jobs = db.scalars(
+            select(BackgroundJob).where(
+                BackgroundJob.status == "running",
+                BackgroundJob.updated_at < stale_before,
+            )
+        ).all()
+        for job in stale_jobs:
+            job.status = "retrying"
+            job.next_retry_at = datetime.now(UTC)
     with SessionLocal.begin() as db:
         enqueue_daily_summaries(db)
     with SessionLocal.begin() as db:

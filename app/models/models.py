@@ -65,6 +65,7 @@ class Subscription(Base):
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255))
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(50), default="inactive", nullable=False)
+    last_stripe_event_created: Mapped[int | None] = mapped_column(Integer)
     billing_period_start: Mapped[datetime | None] = mapped_column()
     billing_period_end: Mapped[datetime | None] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=utcnow, nullable=False)

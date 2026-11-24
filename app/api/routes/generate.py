@@ -36,9 +36,7 @@ def generate(
             },
         )
     try:
-        status, body = MeterService().generate(
-            db, tenant, idempotency_key, payload.model_dump()
-        )
+        status, body = MeterService().generate(db, tenant, idempotency_key, payload.model_dump())
         if status != 200:
             headers = {"Retry-After": str(retry_after_seconds())} if status == 429 else None
             return JSONResponse(status_code=status, content=body, headers=headers)

@@ -8,3 +8,16 @@ AI assisted with implementation structure, schema design, test ideas, Docker con
 - Money uses integer micro-USD and an explicit cached-token rounding policy.
 - Stripe webhooks require official signature verification and are the only subscription upgrade authority.
 - Docker, database, and real Stripe execution remain environment-dependent and must be run locally or in CI.
+
+## Verification and fixes
+
+- Installed Docker Desktop 4.100.1 and started the Docker Engine successfully.
+- Started PostgreSQL 16, API, and worker with Docker Compose and verified health.
+- Fixed the GitHub Actions failure in `alembic.ini`: missing `qualname` values for configured loggers.
+- Fixed migration sequencing by keeping the Stripe event-order column only in migration `002eventorder`.
+- Made worker startup depend on healthy API/migrations instead of starting against an unmigrated database.
+- Fixed live Stripe key handling to allow only test-mode key prefixes and reject `sk_live_*` and `rk_live_*`.
+- Added event timestamp ordering for subscription updates/deletions to prevent older events from restoring stale state.
+- Fixed Stripe test-signature generation for the installed SDK and added real PostgreSQL integration coverage.
+- Final observed suite: 14 passed with 84% application coverage.
+- Real Stripe Checkout and live webhook forwarding are external credential-dependent and remain pending.
