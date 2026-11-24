@@ -4,8 +4,8 @@
 
 ### GitHub Actions
 
-- Previous CI root cause and fix are recorded in earlier history; latest checked runs were successful.
-- The final CI result for the current verification changes will be recorded after the pushed workflow completes.
+- Final commit `004f6bf`; workflow run `45502550873` completed successfully on `master`.
+- CI observed `19 passed, 1 warning in 5.48s`, coverage `94%`, and Ruff `All checks passed`.
 
 ### Local environment
 
@@ -21,7 +21,7 @@
 Observed from the final clean, dedicated PostgreSQL test database run on 2026-11-25:
 
 ```text
-19 passed, 1 warning in 3.53s
+19 passed, 1 warning in 3.53s (local Docker test runner)
 TOTAL coverage: 94%
 Ruff: All checks passed
 ```
