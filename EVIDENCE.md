@@ -4,7 +4,7 @@
 
 ### GitHub Actions
 
-- Final commit `004f6bf`; workflow run `45502550873` completed successfully on `master`.
+- Implementation commit `004f6bf` passed workflow `45502550873`; final evidence commit `ee951a9` passed workflow `45502751819`. Both runs completed successfully on `master`.
 - CI observed `19 passed, 1 warning in 5.48s`, coverage `94%`, and Ruff `All checks passed`.
 
 ### Local environment
