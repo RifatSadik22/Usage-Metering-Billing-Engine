@@ -1,0 +1,11 @@
+name: usage-metering-billing-engine
+run: "docker compose up --build -d"
+seed: "docker compose exec api python -m scripts.seed"
+test: "pytest"
+base_url: "http://localhost:8000"
+endpoints:
+  - "/health"
+  - "/usage"
+  - "/generate"
+  - "/billing/checkout"
+  - "/webhooks/stripe"
