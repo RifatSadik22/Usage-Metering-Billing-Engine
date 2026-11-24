@@ -2,6 +2,12 @@
 
 ## Observed verification — 2026-11-24
 
+### GitHub Actions
+
+- Failed run `45493317635` identified root cause: `alembic.ini` logging configuration lacked `qualname`.
+- Remediation commit: `85c2c9d`.
+- Verified rerun `45497699843`: **success** on `master`.
+
 ### Local environment
 
 - Docker Desktop 4.100.1 / Docker Engine 29.9.3: installed and running.
