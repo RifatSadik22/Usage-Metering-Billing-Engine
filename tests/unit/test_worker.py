@@ -20,6 +20,7 @@ def test_worker_temporary_failure_retries(seeded_database, monkeypatch) -> None:
     import scripts.worker as worker_module
 
     with SessionLocal.begin() as db:
+        db.query(BackgroundJob).delete()
         job = BackgroundJob(
             logical_key="usage-summary:test-temporary:2026-11-24",
             job_type="daily_usage_summary",
@@ -50,6 +51,7 @@ def test_worker_permanent_failure_alerts(seeded_database, monkeypatch, caplog) -
     import scripts.worker as worker_module
 
     with SessionLocal.begin() as db:
+        db.query(BackgroundJob).delete()
         job = BackgroundJob(
             logical_key="usage-summary:test-permanent:2026-11-24",
             job_type="daily_usage_summary",
