@@ -19,6 +19,7 @@ def test_worker_success_result(seeded_database) -> None:
 def test_worker_temporary_failure_retries(seeded_database, monkeypatch) -> None:
     import scripts.worker as worker_module
 
+    monkeypatch.setattr(worker_module, "enqueue_daily_summaries", lambda *args, **kwargs: 0)
     with SessionLocal.begin() as db:
         db.query(BackgroundJob).delete()
         job = BackgroundJob(
@@ -50,6 +51,7 @@ def test_worker_temporary_failure_retries(seeded_database, monkeypatch) -> None:
 def test_worker_permanent_failure_alerts(seeded_database, monkeypatch, caplog) -> None:
     import scripts.worker as worker_module
 
+    monkeypatch.setattr(worker_module, "enqueue_daily_summaries", lambda *args, **kwargs: 0)
     with SessionLocal.begin() as db:
         db.query(BackgroundJob).delete()
         job = BackgroundJob(

@@ -87,7 +87,22 @@ Fresh input excludes cached input. Output excludes reasoning output. These categ
 
 `429` means the monthly usage quota is exhausted; `Retry-After` is the UTC reset time in seconds. `402` means subscription/payment state blocks the action. Rejected requests do not create usage events.
 
-Configure Stripe test-mode keys and a recurring USD 19 Pro price. Live keys and live-mode webhook events are rejected. Never place secrets in source control.
+### Stripe Regional Availability and Testing Strategy
+
+Stripe registration is currently unavailable in Bangladesh. FlyRank's response to another intern facing the same country restriction was: “That means that you can continue with this capstone using the SDK with mocked/test fixtures, or you can choose another capstone or alternative to Stripe.” This is FlyRank's general guidance; it was not a response addressed directly to this project.
+
+Accordingly, this capstone retains the official Stripe SDK integration and production-style test-mode Checkout code, while automated verification uses mocked Stripe SDK responses and cryptographically signed local webhook fixtures. The application still verifies real Stripe webhook signatures, refuses live-mode keys/events, and does not synthesize payment success. A fixture only simulates the verified webhook input during automated tests; it does not claim that Stripe hosted Checkout occurred.
+
+Reproduce the deterministic mock workflow using the project test command:
+
+```powershell
+docker compose up --build -d
+docker compose exec -T api sh -c "pip install -e '.[test]' && python -m scripts.test"
+```
+
+The test runner recreates only the dedicated `billing_capstone_test` database, applies migrations, seeds fixtures, and runs pytest with coverage. It does not erase the normal `billing` application database. The fixture coverage checks Checkout Session creation, tenant metadata, server-selected recurring Pro price, checkout URL response, signed Free-to-Pro synchronization, updated `/usage` limits, forged-signature rejection, event replay deduplication, subscription updates, cancellation, stale-event ordering, and payment-required handling. These are mocked/fixture tests, not a real Stripe-hosted payment flow.
+
+Live Stripe test credentials are optional and only for evaluators who can register for Stripe. Live keys and live-mode webhook events are rejected. Never put secrets in source control.
 
 With Stripe CLI:
 
@@ -99,9 +114,9 @@ stripe trigger checkout.session.completed
 
 Browser Checkout must never upgrade a tenant directly. Verified Stripe webhooks are the authority. Use test card `4242 4242 4242 4242`, a future expiry, and any valid CVC.
 
-### Secure Stripe test-mode setup
+### Optional real Stripe test-mode setup for eligible evaluators
 
-1. Create a free Stripe account and open the Dashboard in Test mode.
+1. If Stripe registration is available in your country, create an account and open the Dashboard in Test mode.
 2. Confirm the Dashboard URL indicates test mode. Never enter or commit live-mode keys.
 3. Create a recurring product with a USD 19 monthly price.
 4. Copy the test Secret key from Developers → API keys.
@@ -134,7 +149,7 @@ Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Filter stripe.exe -
 stripe listen --forward-to localhost:8000/webhooks/stripe
 ```
 
-Copy the CLI's displayed `whsec_...` signing secret into `STRIPE_WEBHOOK_SECRET` in `.env`, then restart Docker Compose.
+Copy the CLI's displayed `whsec_...` signing secret into `STRIPE_WEBHOOK_SECRET` in `.env`, then restart Docker Compose. This optional live-SDK test mode is not required for submission when regional registration is unavailable.
 
 8. Create Checkout for Tenant A:
 
@@ -150,14 +165,15 @@ Complete Checkout with `4242 4242 4242 4242`, a future expiry, and any valid CVC
 Invoke-RestMethod -Uri http://localhost:8000/usage -Headers $headers
 ```
 
-The tenant is upgraded only after a verified `checkout.session.completed` or synchronized subscription event. Replay handling can be tested by replaying the same Stripe event in the CLI; the database event ID must remain unique.
+The tenant is upgraded only after a verified `checkout.session.completed` or synchronized subscription event. Replay handling can be tested by replaying the same Stripe event in the CLI; the database event ID must remain unique. This section documents an optional evaluator path and is not the project's claimed Checkout verification.
 
 Subscription behavior: `active` and `trialing` are serviceable and use Pro limits. `past_due` and `unpaid` require payment and return `402`. Confirmed deletion or cancellation falls back to Free. An older update will not be used to restore a tenant after a confirmed deletion in the durable state model.
 
 ## Tests
 
 ```powershell
-pytest
+pip install -e ".[test]"
+python -m scripts.test
 ruff check .
 alembic upgrade head
 ```
